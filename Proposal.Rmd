@@ -12,5 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Proposal
 
 ```{r}
-
+mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
+mask_use
+```
+```{r}
+rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
+rolling_avg
 ```

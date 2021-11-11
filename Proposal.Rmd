@@ -9,8 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Proposal
-
+```{r}
+# Loading tidyverse
+library(tidyverse)
+```
+## Data Sets
+We want to use the mask use and rolling average data sets from the New York Times Covid-19 data repository on GitHub to analyse the relationship between the percentage of people who wear a mask, and how many Covid cases or deaths there are in that county. 
+### Import data sets
 ```{r}
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
 mask_use
@@ -18,4 +23,15 @@ mask_use
 ```{r}
 rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
 rolling_avg
+```
+### Tidying and merging data sets
+```{r}
+rolling_avg_new <- mutate(rolling_avg,
+                     geoid = as.integer(substr(geoid,5,9)))
+rolling_avg_new <- rename(rolling_avg_new, COUNTYFP = geoid)
+```
+
+```{r}
+data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
+data
 ```

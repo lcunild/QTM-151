@@ -13,10 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Loading tidyverse
 library(tidyverse)
 ```
-For our project we want to evaluate the effectiveness of masks in preventing cases and deaths caused by Covid-19. We have chosen the New York Times Covid-19 data repository on GitHub as our data source, as this contains a large amount of data, which is updated multiple times per day.
+For our project we want to evaluate the effectiveness of masks in preventing cases and deaths caused by Covid-19. There has been much debate in the media regarding the topic, therefore we think that it would be interesting to examine the data, to see if there is a significant link between mask usage and Covid cases. We would also like to look at regional variation in Covid cases and deaths, and see if there is a correlation between higher cases and higher numbers of deaths.
 
 ## Data Sets
-We want to use the mask use and rolling average data sets from the NYT Covid-19 data to analyse the relationship between the percentage of people who wear a mask, and how many Covid cases or deaths there are in that county. The data sets contain data from all 50 US states, as well as territories such as Puerto Rico. We will join together the two data sets, using `inner_join()` from `dplyr`, matching by county. This will allow us to see the mask use for each county paired with the rolling average for cases and deaths. We could also group the data by state or region, to find which regions of the US have high mask usage or low number of covid cases, and visualise this using the `maps` package.
+We have chosen the New York Times Covid-19 data repository on GitHub as our data source, as this contains a large amount of data, which is updated multiple times per day. Specifically, we want to use the mask use and rolling average data sets to analyse the relationship between the percentage of people who wear a mask, and how many Covid cases or deaths there are in that county. The data sets contain data from all 50 US states, as well as territories such as Puerto Rico. We will join together the two data sets, using `inner_join()` from `dplyr`, matching by county. This will allow us to see the mask use for each county paired with the rolling average for cases and deaths. We could also group the data by state or region, to find which regions of the US have high mask usage or low number of covid cases, and visualise this using the `maps` package.
 
 ### Import data sets
 ```{r}
@@ -39,4 +39,4 @@ data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
 head(data)
 ```
 ## Anticipated Results
-We expect to find a negative correlation between mask usage and Covid-19 cases/deaths. We also expect to discover regional variation in the data sets, with certain regions having higher numbers of cases and deaths, even with high mask usage. This could be caused by a number of factors, including state policies, a more vulnerable population, or having a high number of visitors, for example. Finally, we expect there to be variation within states, specifically between rural and urban areas.
+We expect to find a negative correlation between mask usage and Covid-19 cases/deaths. We also expect to discover regional variation in the data sets, with certain regions having higher numbers of cases and deaths, even with high mask usage. This could be caused by a number of factors, including state policies, a more vulnerable population, or having a high number of visitors, for example. Finally, we expect there to be variation within states, specifically between rural and urban areas, where population densities differ, as Covid can spread more easily in densely populated areas.

@@ -13,8 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Loading tidyverse
 library(tidyverse)
 ```
+For our project we want to evaluate the effectiveness of masks in preventing cases and deaths caused by Covid-19. We have chosen the New York Times Covid-19 data repository on GitHub as our data source, as this contains a large amount of data, which is updated multiple times per day.
+
 ## Data Sets
-We want to use the mask use and rolling average data sets from the New York Times Covid-19 data repository on GitHub to analyse the relationship between the percentage of people who wear a mask, and how many Covid cases or deaths there are in that county. 
+We want to use the mask use and rolling average data sets from the NYT Covid-19 data to analyse the relationship between the percentage of people who wear a mask, and how many Covid cases or deaths there are in that county. 
 ### Import data sets
 ```{r}
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')

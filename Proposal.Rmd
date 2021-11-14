@@ -21,11 +21,11 @@ We want to use the mask use and rolling average data sets from the NYT Covid-19 
 ### Import data sets
 ```{r}
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
-mask_use
+head(mask_use)
 ```
 ```{r}
 rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
-rolling_avg
+head(rolling_avg)
 ```
 ### Tidying and merging data sets
 ```{r}
@@ -36,7 +36,7 @@ rolling_avg_new <- rename(rolling_avg_new, COUNTYFP = geoid)
 
 ```{r}
 data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
-data
+head(data)
 ```
 ## Anticipated Results
 We expect to find a negative correlation between mask usage and Covid-19 cases/deaths. We also expect to discover regional variation in the data sets, with certain regions having higher numbers of cases and deaths, even with high mask usage. This could be caused by a number of factors, including state policies, a more vulnerable population, or having a high number of visitors, for example. Finally, we expect there to be variation within states, specifically between rural and urban areas.

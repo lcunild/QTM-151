@@ -1,0 +1,42 @@
+---
+title: "Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
+head(mask_use)
+rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
+head(rolling_avg)
+rolling_avg_new <- mutate(rolling_avg,geoid = as.integer(substr(geoid,5,9)))
+rolling_avg_new <- rename(rolling_avg_new, COUNTYFP = geoid)
+data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
+head(data)
+```
+```{r}
+data <- data %>% mutate(mask_frequency = 1*data$ALWAYS + 0.8*data$FREQUENTLY + 0.6*data$SOMETIMES + 0.4*data$RARELY + 0.2*data$NEVER)
+data <- arrange(data, desc(mask_frequency))
+```
+
+```{r}
+data %>%
+  mutate(state_new = fct_lump(state,10))%>%
+  group_by(state_new)%>% 
+  summarise(sum_case = sum(cases)) %>%
+  ggplot(aes(x=state_new, y=log(sum_case)))+
+  geom_point()
+```
+```{r}
+data %>%
+  filter(cases>=0)%>%
+  group_by(state)%>%
+  ggplot(aes(x=mask_frequency,y=cases))+
+  geom_point()
+
+```

@@ -1,0 +1,71 @@
+---
+title: "Project"
+author: "Lauren Cunild"
+date: "11/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
+head(mask_use)
+rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
+head(rolling_avg)
+rolling_avg_new <- mutate(rolling_avg,geoid = as.integer(substr(geoid,5,9)))
+rolling_avg_new <- rename(rolling_avg_new, COUNTYFP = geoid)
+data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
+head(data)
+```
+
+```{r}
+# Extract mask use data
+mask_data <- data[c("date", "COUNTYFP", "county", "state","NEVER","RARELY", "SOMETIMES", "FREQUENTLY", "ALWAYS")]
+```
+
+```{r}
+# filter for 3 different dates
+mask_data_filtered <- filter(mask_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
+mask_data_filtered
+```
+
+
+```{r}
+# assign mask usage score to each county, create new df to display data in descending order
+mask_freq_filtered <- mask_data_filtered %>% mutate(mask_frequency = 1*mask_data_filtered$ALWAYS + 0.8*mask_data_filtered$FREQUENTLY + 0.6*mask_data_filtered$SOMETIMES + 0.4*mask_data_filtered$RARELY + 0.2*mask_data_filtered$NEVER)
+mask_freq_filtered <- arrange(mask_freq_filtered, desc(mask_frequency))
+mask_freq_filtered <- select(mask_freq_filtered, c('date', 'COUNTYFP','county', 'state', 'mask_frequency'))
+mask_freq_filtered
+```
+```{r}
+# create df for cases and deaths avg per 100k in each county on chosen date
+cases_data <- data[c("date", "COUNTYFP", "county", "state","cases_avg_per_100k", "deaths_avg_per_100k")]
+cases_data_filtered <- filter(cases_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
+cases_data_filtered
+```
+```{r}
+# Join previous two df
+cases_mask_data <- right_join(cases_data_filtered, mask_freq_filtered, by=c ("COUNTYFP", "date","county", "state"))
+cases_mask_data
+```
+
+```{r}
+data %>%
+  mutate(state_new = fct_lump(state,10))%>%
+  group_by(state_new)%>% 
+  summarise(sum_case = sum(cases)) %>%
+  ggplot(aes(x=state_new, y=log(sum_case)))+
+  geom_point()
+```
+```{r}
+data %>%
+  filter(cases>=0)%>%
+  group_by(state)%>%
+  ggplot(aes(x=mask_frequency,y=cases))+
+  geom_point()
+
+```

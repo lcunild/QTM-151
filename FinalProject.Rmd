@@ -9,63 +9,101 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+First, we need to download our data from the NYT data set. We are using the rolling average data for deaths and cases, and the mask use by county data set. Next, we need to join the data sets, so that we can better analyze whether cases and deaths do depend upon the mask use in the county, or state.
+
 ```{r}
+# Import packages
 library(tidyverse)
 library(dplyr)
+# Import data
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
-head(mask_use)
 rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
-head(rolling_avg)
+# Extract county id code
 rolling_avg_new <- mutate(rolling_avg,geoid = as.integer(substr(geoid,5,9)))
+# Mutate to rename county id code, so that the two data sets are consistent
 rolling_avg_new <- rename(rolling_avg_new, COUNTYFP = geoid)
+# create a new data set with both the cases/deaths averages and mask use data by county
 data <- inner_join(rolling_avg_new, mask_use, by="COUNTYFP")
 head(data)
 ```
+
+We can now look at the mask frequency data by county, to identify any trends in our data set. We want to see which areas have higher and lower mask usage, and whether it depends on other factors, such as geographic location.
 
 ```{r}
 # Extract mask use data
 mask_data <- data[c("date", "COUNTYFP", "county", "state","NEVER","RARELY", "SOMETIMES", "FREQUENTLY", "ALWAYS")]
 ```
 
+As the data set is very large, we have chosen three dates, approximately 6 months apart. We chose all three dates to be a Wednesday, as reporting can be delayed over the weekend, which would skew our data if some dates were weekends, and some were not.
+
 ```{r}
-# filter for 3 different dates
+# filter for 3 different dates, approx 6 months apart
 mask_data_filtered <- filter(mask_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
 mask_data_filtered
 ```
-
+Next, we created a new variable called `mask_frequency`, which assigns a score to each county based upon the reported mask use. We gave never a score of 0.2, rarely 0.4, sometimes 0.6, frequently 0.8 and always 1. We then multiplied these scores by the probability, to give an approximate percentage of the amount of time people were masks for in the county, which higher scores corresponding to a higher reported mask usage.
 
 ```{r}
-# assign mask usage score to each county, create new df to display data in descending order
+# create new df to assign mask usage score to each county
 mask_freq_filtered <- mask_data_filtered %>% mutate(mask_frequency = 1*mask_data_filtered$ALWAYS + 0.8*mask_data_filtered$FREQUENTLY + 0.6*mask_data_filtered$SOMETIMES + 0.4*mask_data_filtered$RARELY + 0.2*mask_data_filtered$NEVER)
+# display data in descending order
 mask_freq_filtered <- arrange(mask_freq_filtered, desc(mask_frequency))
 mask_freq_filtered <- select(mask_freq_filtered, c('date', 'COUNTYFP','county', 'state', 'mask_frequency'))
 mask_freq_filtered
 ```
+We also need to examine how the number of cases and deaths vary by county. To do this, we will use the number of cases and deaths reported per 100k of the population, to standardize across our data set. 
+
 ```{r}
 # create df for cases and deaths avg per 100k in each county on chosen date
 cases_data <- data[c("date", "COUNTYFP", "county", "state","cases_avg_per_100k", "deaths_avg_per_100k")]
 cases_data_filtered <- filter(cases_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
 cases_data_filtered
 ```
+Now that we have looked at the two data sets individually, we want to combine them, so that we can answer our question of whether mask use does affect the number of deaths and cases reported.
+
 ```{r}
 # Join previous two df
 cases_mask_data <- right_join(cases_data_filtered, mask_freq_filtered, by=c ("COUNTYFP", "date","county", "state"))
 cases_mask_data
 ```
+As there are over 3,000 counties, we will group the counties by state, to answer our hypothesis on a state-wide level.
+
+Looking at the average number of cases by state:
+
 
 ```{r}
-data %>%
-  mutate(state_new = fct_lump(state,10))%>%
-  group_by(state_new)%>% 
-  summarise(sum_case = sum(cases)) %>%
-  ggplot(aes(x=state_new, y=log(sum_case)))+
-  geom_point()
+cases_mask_data %>%
+  mutate(State = fct_lump(state))%>%
+  group_by(State)%>% 
+  summarise(case_avg = cases_avg_per_100k) %>%
+  ggplot(aes(x=State, y=case_avg))+
+  geom_point()+ theme(
+        axis.text.x=element_blank())
 ```
+For deaths per 100k, by state:
+
 ```{r}
-data %>%
-  filter(cases>=0)%>%
-  group_by(state)%>%
-  ggplot(aes(x=mask_frequency,y=cases))+
-  geom_point()
+cases_mask_data %>%
+  mutate(State = fct_lump(state))%>%
+  group_by(State)%>% 
+  summarise(death_avg = deaths_avg_per_100k) %>%
+  ggplot(aes(x=State, y=death_avg))+
+  geom_point()+ theme(
+        axis.text.x=element_blank())
+```
+
+For mask usage, by state:
+```{r}
+cases_mask_data %>%
+  mutate(State = fct_lump(state))%>%
+  group_by(State)%>% 
+  summarise(mask_usage = mask_frequency) %>%
+  ggplot(aes(x=State, y=mask_usage))+
+  geom_point()+ theme(
+        axis.text.x=element_blank())
+```
+We can see that although the average mask usage seems to be consistent across states, along with the highs and lows for each state, there is a large variation within the counties in each state. Therefore, we want to analyze the relationship between mask usage and deaths/cases on a county level. We can do this with a scatter graph:
+
+```{r}
 
 ```

@@ -1,7 +1,7 @@
 ---
 title: "Project"
 author: "Lauren Cunild"
-date: "11/13/2021"
+date: "12/1/2021"
 output: html_document
 ---
 
@@ -15,6 +15,7 @@ First, we need to download our data from the NYT data set. We are using the roll
 # Import packages
 library(tidyverse)
 library(dplyr)
+library(maps)
 # Import data
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
 rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
@@ -105,5 +106,89 @@ cases_mask_data %>%
 We can see that although the average mask usage seems to be consistent across states, along with the highs and lows for each state, there is a large variation within the counties in each state. Therefore, we want to analyze the relationship between mask usage and deaths/cases on a county level. We can do this with a scatter graph:
 
 ```{r}
-
+# draw stratified graphs with smooth line
+cases_mask_data %>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=mask_frequency,y=cases_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
 ```
+It appears that we have a large outlier, with more than 1000 cases per 100k of the population. This is making it difficult to analyze any trend in our data, as the rest of our data is clustered at much lower average case numbers. We can look at this data point more closely:
+```{r}
+cases_mask_data %>%
+  filter(cases_avg_per_100k>1000)
+```
+We can see that this point is for the county of Forest, Pennsylvania. Looking up this county in the case data set:
+```{r}
+data %>% filter(COUNTYFP == '42053' &  (date == '2021-01-19' |date == '2021-01-20' | date == '2021-01-21'| date == '2021-01-22'| date == '2021-01-23'))%>%
+  select(c('date','county','cases'))
+```
+From looking at the reported number of cases just before and after the date with the large case average, we can see that it appears to be a reporting bias, rather than such a large jump in cases. Although it could be a large outbreak, we would expect there to be an increased number of cases in the days preceding and in the days after our chosen date, however this is not the case. Therefore, it looks like there could have been a delay in reporting, with cases from a longer period all being recorded on a single day, making the average much higher than it otherwise would have been. Therefore, we can exclude this data point from our analysis, to see if there is a clearer trend without our regression being skewed by the outlier. 
+
+```{r}
+# draw stratified graphs with smooth line
+cases_mask_data %>%
+  filter(cases_avg_per_100k<=1000)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=mask_frequency,y=cases_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
+```
+Even after excluding our outlier, there still does not appear to be a clear trend between mask frequency and the average number of cases. However, we can see that mask usage is high across all counties, with only three below 0.5. Therefore, it is possible that in general people are wearing masks in high-risk situations, for example in crowded spaces on when indoors, and therefore wearing masks at other times, which would increase the frequency score does not cause a further decrease in case numbers. 
+
+We can also look at the average cases and deaths in the counties which report the lowest and highest proportion of people who "never" wear a mask, and who "always" where a mask, to see if this gives a clearer answer to whether there is a statistical relationship between wearing a mask and getting Covid, or indeed dying from it. 
+
+```{r}
+full_cases_mask_data <- right_join(cases_data_filtered, mask_data_filtered, by=c ("COUNTYFP", "date","county", "state"))
+full_cases_mask_data <- full_cases_mask_data %>% mutate(low_usage = full_cases_mask_data$NEVER + full_cases_mask_data$RARELY, high_usage = full_cases_mask_data$FREQUENTLY + full_cases_mask_data$ALWAYS)
+
+# Plotting average cases per 100k against percentage who rarely or never wear masks
+full_cases_mask_data %>%
+  filter(cases_avg_per_100k<=1000)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=low_usage,y=cases_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
+
+# Plotting average cases per 100k against percentage who frequently or always wear masks
+full_cases_mask_data %>%
+  filter(cases_avg_per_100k<=1000)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=high_usage,y=cases_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
+```
+Looking at the above scatter graphs, we can conclude that there does not seem to be a statistically significant correlation between mask usage and the average number of Covid cases.
+
+Looking at deaths instead:
+```{r}
+# Plotting average deaths per 100k against percentage who rarely or never wear masks
+full_cases_mask_data %>%
+  filter(cases_avg_per_100k<=1000)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=low_usage,y=deaths_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
+
+# Plotting average deaths per 100k against percentage who frequently or always wear masks
+full_cases_mask_data %>%
+  filter(cases_avg_per_100k<=1000)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=high_usage,y=deaths_avg_per_100k))+
+  geom_point()+
+  geom_smooth()
+```
+Again, we do not seem to have a significant relationship between mask usage and the average number of deaths per 100k people. However, the counties with higher death rates do appear to report a lower mask usage. We can see that in the following graph:
+```{r}
+# Plotting higher average deaths per 100k against percentage who rarely or never wear masks
+full_cases_mask_data %>%
+  filter(deaths_avg_per_100k>5)%>%
+  group_by(COUNTYFP)%>%
+  ggplot(aes(x=low_usage,y=deaths_avg_per_100k))+
+  geom_point()+stat_smooth(method="lm", se=FALSE)
+```
+Therefore, it seems like some other factors could be influencing death rate, causing it to remain low regardless of mask usage. We can look at death rate on a map, to see if geographic location (i.e. whether a county is rural or near a big city) affects death rate.
+
+```{r}
+county_df <- map_data("county")
+qplot(long,lat,data=county_df)

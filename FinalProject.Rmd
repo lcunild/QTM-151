@@ -1,6 +1,6 @@
 ---
-title: "Project"
-author: "Lauren Cunild"
+title: "Covid Project Group 2"
+author: "Lauren Cunild, Alan Yang, Dawit Dean, Wenqi Li, Zach Karol, Bowen You"
 date: "12/1/2021"
 output: html_document
 ---
@@ -16,6 +16,7 @@ First, we need to download our data from the NYT data set. We are using the roll
 library(tidyverse)
 library(dplyr)
 library(maps)
+library(lubridate)
 # Import data
 mask_use <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/mask-use/mask-use-by-county.csv')
 rolling_avg <- read.csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/rolling-averages/us-counties-2021.csv')
@@ -35,12 +36,12 @@ We can now look at the mask frequency data by county, to identify any trends in 
 mask_data <- data[c("date", "COUNTYFP", "county", "state","NEVER","RARELY", "SOMETIMES", "FREQUENTLY", "ALWAYS")]
 ```
 
-As the data set is very large, we have chosen three dates, approximately 6 months apart. We chose all three dates to be a Wednesday, as reporting can be delayed over the weekend, which would skew our data if some dates were weekends, and some were not.
+As the data set is very large, we have chosen three dates, approximately 6 months apart. We chose all three dates to be a Wednesday, as reporting can be delayed over the weekend, which would skew our data if some dates were weekends, and some were not. Besides, We also parse the Strings in "date" column into date form using lubridate.
 
 ```{r}
 # filter for 3 different dates, approx 6 months apart
-mask_data_filtered <- filter(mask_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
-mask_data_filtered
+mask_data_filtered <- mask_data %>% mutate(date = ymd(date)) %>% filter (date == as.Date("2021-01-21")| date == as.Date('2021-06-09')| date == as.Date('2021-11-17'))
+head(mask_data_filtered)
 ```
 Next, we created a new variable called `mask_frequency`, which assigns a score to each county based upon the reported mask use. We gave never a score of 0.2, rarely 0.4, sometimes 0.6, frequently 0.8 and always 1. We then multiplied these scores by the probability, to give an approximate percentage of the amount of time people were masks for in the county, which higher scores corresponding to a higher reported mask usage.
 
@@ -50,22 +51,22 @@ mask_freq_filtered <- mask_data_filtered %>% mutate(mask_frequency = 1*mask_data
 # display data in descending order
 mask_freq_filtered <- arrange(mask_freq_filtered, desc(mask_frequency))
 mask_freq_filtered <- select(mask_freq_filtered, c('date', 'COUNTYFP','county', 'state', 'mask_frequency'))
-mask_freq_filtered
+head(mask_freq_filtered)
 ```
 We also need to examine how the number of cases and deaths vary by county. To do this, we will use the number of cases and deaths reported per 100k of the population, to standardize across our data set. 
 
 ```{r}
 # create df for cases and deaths avg per 100k in each county on chosen date
 cases_data <- data[c("date", "COUNTYFP", "county", "state","cases_avg_per_100k", "deaths_avg_per_100k")]
-cases_data_filtered <- filter(cases_data, date == '2021-01-21'| date == '2021-06-09'| date == '2021-11-17')
-cases_data_filtered
+cases_data_filtered <- cases_data %>% mutate(date = ymd(date)) %>% filter (date == as.Date("2021-01-21")| date == as.Date('2021-06-09')| date == as.Date('2021-11-17'))
+head(cases_data_filtered)
 ```
 Now that we have looked at the two data sets individually, we want to combine them, so that we can answer our question of whether mask use does affect the number of deaths and cases reported.
 
 ```{r}
 # Join previous two df
 cases_mask_data <- right_join(cases_data_filtered, mask_freq_filtered, by=c ("COUNTYFP", "date","county", "state"))
-cases_mask_data
+head(cases_mask_data)
 ```
 As there are over 3,000 counties, we will group the counties by state, to answer our hypothesis on a state-wide level.
 
@@ -141,7 +142,6 @@ We can also look at the average cases and deaths in the counties which report th
 ```{r}
 full_cases_mask_data <- right_join(cases_data_filtered, mask_data_filtered, by=c ("COUNTYFP", "date","county", "state"))
 full_cases_mask_data <- full_cases_mask_data %>% mutate(low_usage = full_cases_mask_data$NEVER + full_cases_mask_data$RARELY, high_usage = full_cases_mask_data$FREQUENTLY + full_cases_mask_data$ALWAYS)
-
 # Plotting average cases per 100k against percentage who rarely or never wear masks
 full_cases_mask_data %>%
   filter(cases_avg_per_100k<=1000)%>%
@@ -149,7 +149,6 @@ full_cases_mask_data %>%
   ggplot(aes(x=low_usage,y=cases_avg_per_100k))+
   geom_point()+
   geom_smooth(method="lm", se=FALSE)
-
 # Plotting average cases per 100k against percentage who frequently or always wear masks
 full_cases_mask_data %>%
   filter(cases_avg_per_100k<=1000)%>%
@@ -169,7 +168,6 @@ full_cases_mask_data %>%
   ggplot(aes(x=low_usage,y=deaths_avg_per_100k))+
   geom_point()+
   geom_smooth(method="lm", se=FALSE)
-
 # Plotting average deaths per 100k against percentage who frequently or always wear masks
 full_cases_mask_data %>%
   filter(cases_avg_per_100k<=1000)%>%
@@ -195,9 +193,7 @@ Therefore, it seems like some other factors could be influencing death rate, cau
 county_df <- map_data("county")
 full_cases_mask_data$subregion<-tolower(full_cases_mask_data$county)
 map_mask_df<-right_join(county_df,full_cases_mask_data)
-
 map_plot<-ggplot(map_mask_df)+ geom_polygon(aes(x=long,y=lat,fill= cases_avg_per_100k,group=group))+coord_fixed(1.3)+theme_bw()
-
 remove_axis <- theme(
   axis.text = element_blank(),
   axis.line = element_blank(),
@@ -206,31 +202,23 @@ remove_axis <- theme(
   panel.grid = element_blank(),
   axis.title = element_blank()
   )
-
 map_plot +  scale_fill_gradientn(colours = rainbow(5) ,trans = "log10")+remove_axis
 ```
 
-Seems like there is certain hotspots in the south and in Texas and California with high number of cases. Rural areas seem to have lower number of cases, but some urbans areas have low and others have high. The American north west also seems to have a low number of cases
+Seems like there is certain hotspots in the south and in Texas and California with high number of cases. Rural areas seem to have lower number of cases, but some urbans areas have low and others have high
 
 
 ```{r}
 map_plot<-ggplot(map_mask_df)+ geom_polygon(aes(x=long,y=lat,fill= low_usage,group=group))+coord_fixed(1.3)+theme_bw()
-
 map_plot +  scale_fill_gradientn(colours = rainbow(4), trans = "log10")+remove_axis
-
-
-
 ```
 
-It seems like in rural areas people wear there mask less. The higher the low_usage score the less they wear their mask. Central United states seems to have lower mask usage when compared to the coasts. This may be due to central united states being more rural.
+It seems like in rural areas people wear there mask less. The high the low_usage score the less they wear their mask.
 
 ```{r}
 georgia_data<- map_mask_df%>%filter(region=="georgia")
-
 map_plot<-ggplot(georgia_data)+ geom_polygon(aes(x=long,y=lat,fill= cases_avg_per_100k,group=group))+coord_fixed(1.3)+theme_bw()
-
 map_plot +  scale_fill_gradient2()+remove_axis
-
 ```
 There are a few areas in georgia which have a lot of cases but most seem to have few.
 
@@ -238,13 +226,6 @@ There are a few areas in georgia which have a lot of cases but most seem to have
 state_df <- map_data("state")
 full_cases_mask_data$region<-tolower(full_cases_mask_data$state)
 map_mask_df<-inner_join(state_df,full_cases_mask_data,by=c("region"))
-
-
 map_plot<-ggplot(map_mask_df)+ geom_polygon(aes(x=long,y=lat,fill=cases_avg_per_100k,group=group))+coord_fixed(1.3)+theme_bw()
-
 map_plot + scale_fill_gradientn(colours = rainbow(4), trans = "log10")+remove_axis
-
 ```
-
-
-

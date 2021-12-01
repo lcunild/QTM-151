@@ -210,7 +210,7 @@ remove_axis <- theme(
 map_plot +  scale_fill_gradientn(colours = rainbow(5) ,trans = "log10")+remove_axis
 ```
 
-Seems like there is certain hotspots in the south and in Texas and California with high number of cases. Rural areas seem to have lower number of cases, but some urbans areas have low and others have high
+Seems like there is certain hotspots in the south and in Texas and California with high number of cases. Rural areas seem to have lower number of cases, but some urbans areas have low and others have high. The American north west also seems to have a low number of cases
 
 
 ```{r}
@@ -222,7 +222,7 @@ map_plot +  scale_fill_gradientn(colours = rainbow(4), trans = "log10")+remove_a
 
 ```
 
-It seems like in rural areas people wear there mask less. The high the low_usage score the less they wear their mask.
+It seems like in rural areas people wear there mask less. The higher the low_usage score the less they wear their mask. Central United states seems to have lower mask usage when compared to the coasts. This may be due to central united states being more rural.
 
 ```{r}
 georgia_data<- map_mask_df%>%filter(region=="georgia")
